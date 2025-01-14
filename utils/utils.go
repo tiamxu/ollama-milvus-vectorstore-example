@@ -14,7 +14,7 @@ import (
 )
 
 func GetUserInput(prompt string) (string, error) {
-	fmt.Printf("==== %s ====\n", prompt)
+	fmt.Printf("%s\n", prompt)
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
 	if err != nil {

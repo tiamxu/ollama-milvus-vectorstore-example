@@ -1,1 +1,1 @@
-# ollama-milvus-vectorstore-example
+#

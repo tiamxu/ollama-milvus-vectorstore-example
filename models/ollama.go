@@ -3,6 +3,8 @@ package models
 import (
 	"context"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/milvus-io/milvus-sdk-go/v2/client"
 	"github.com/milvus-io/milvus-sdk-go/v2/entity"
@@ -15,35 +17,63 @@ import (
 	"github.com/tmc/langchaingo/schema"
 	"github.com/tmc/langchaingo/vectorstores"
 	"github.com/tmc/langchaingo/vectorstores/milvus"
+
+	"ollama-milvus-vectorstore-example/config"
+	"ollama-milvus-vectorstore-example/utils"
 )
 
-const (
-	milvusAddr     = "10.18.150.1:19530"
-	ollamaAddr     = "http://192.168.1.228:11434"
-	llmModel       = "qwen2.5:7b"
-	embedderModel  = "nomic-embed-text:latest"
-	dbName         = "default"
-	collectionName = "text_collection"
-	dim            = 128
-	topK           = 5
-	chunkSize      = 100
-	chunkOverlap   = 0
-	msgFmt         = "==== %s ====\n"
-	scoreThreshold = 0.5 // 设置分数阈值
-)
+type ModelService struct {
+	llm      llms.Model
+	embedder embeddings.Embedder
+	store    *milvus.Store
+	cfg      *config.Config
+	logger   *log.Logger
+}
 
-func OllamModel() (llms.Model, embeddings.Embedder, error) {
+func NewModelService(cfg *config.Config, logger *log.Logger) *ModelService {
+	return &ModelService{
+		cfg:    cfg,
+		logger: logger,
+	}
+}
+
+func (s *ModelService) Initialize(ctx context.Context) error {
+	start := time.Now()
+	defer func() {
+		s.logger.Printf("Model initialization completed in %v", time.Since(start))
+	}()
+
+	// Initialize LLM and Embedder
+	llm, embedder, err := s.initModels()
+	if err != nil {
+		return fmt.Errorf("model initialization failed: %w", err)
+	}
+
+	// Initialize Vector Store
+	store, err := s.initVectorStore(ctx, embedder)
+	if err != nil {
+		return fmt.Errorf("vector store initialization failed: %w", err)
+	}
+
+	s.llm = llm
+	s.embedder = embedder
+	s.store = store
+
+	return nil
+}
+
+func (s *ModelService) initModels() (llms.Model, embeddings.Embedder, error) {
 	llm, err := ollama.New(
-		ollama.WithModel(llmModel),
-		ollama.WithServerURL(ollamaAddr),
+		ollama.WithModel(s.cfg.Ollama.LLMModel),
+		ollama.WithServerURL(s.cfg.Ollama.Address),
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to initialize LLM: %w", err)
 	}
 
 	embedderModel, err := ollama.New(
-		ollama.WithModel(embedderModel),
-		ollama.WithServerURL(ollamaAddr),
+		ollama.WithModel(s.cfg.Ollama.EmbedderModel),
+		ollama.WithServerURL(s.cfg.Ollama.Address),
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to initialize embedder model: %w", err)
@@ -56,8 +86,9 @@ func OllamModel() (llms.Model, embeddings.Embedder, error) {
 
 	return llm, embedder, nil
 }
-func MilvusStore(ctx context.Context, embedder embeddings.Embedder) (*milvus.Store, error) {
-	idx, err := entity.NewIndexIvfFlat(entity.L2, dim)
+
+func (s *ModelService) initVectorStore(ctx context.Context, embedder embeddings.Embedder) (*milvus.Store, error) {
+	idx, err := entity.NewIndexIvfFlat(entity.L2, 128)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ivf flat index: %w", err)
 	}
@@ -65,32 +96,69 @@ func MilvusStore(ctx context.Context, embedder embeddings.Embedder) (*milvus.Sto
 	store, err := milvus.New(
 		ctx,
 		client.Config{
-			Address: milvusAddr,
-			DBName:  dbName,
+			Address: s.cfg.Milvus.Address,
+			DBName:  s.cfg.Milvus.DBName,
 		},
 		milvus.WithEmbedder(embedder),
-		milvus.WithCollectionName(collectionName),
+		milvus.WithCollectionName(s.cfg.Milvus.Collection),
 		milvus.WithIndex(idx),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize Milvus store: %w", err)
 	}
-
+	// docs := utils.TextToChunks("./index.txt", 50, 0)
+	// _, err = store.AddDocuments(ctx, docs)
+	// if err != nil {
+	// 	log.Fatalf("AddDocument: %v\n", err)
+	// }
 	return &store, nil
 }
 
-func UseRetriever(store *milvus.Store, query string, topk int) ([]schema.Document, error) {
-	retriever := vectorstores.ToRetriever(store, topk)
-	//retriever := vectorstores.ToRetriever(store, topk, vectorstores.WithScoreThreshold(scoreThreshold))
+func (s *ModelService) Query(ctx context.Context, query string, topK int) (string, error) {
+	start := time.Now()
+	defer func() {
+		s.logger.Printf("Query completed in %v", time.Since(start))
+	}()
 
-	docRetrieved, err := retriever.GetRelevantDocuments(context.Background(), query)
+	// Retrieve relevant documents
+	docs, err := s.retrieveDocuments(ctx, query, topK)
+	if err != nil {
+		return "", fmt.Errorf("document retrieval failed: %w", err)
+	}
+
+	// Generate answer
+	answer, err := s.generateAnswer(ctx, docs, query)
+	if err != nil {
+		return "", fmt.Errorf("answer generation failed: %w", err)
+	}
+
+	return answer, nil
+}
+
+func (s *ModelService) AddDocuments(ctx context.Context, fileName string) error {
+	// Load and split documents
+	docs := utils.TextToChunks(fileName, s.cfg.Processing.ChunkSize, s.cfg.Processing.ChunkOverlap)
+
+	// Add documents to vector store
+	_, err := s.store.AddDocuments(ctx, docs)
+	if err != nil {
+		return fmt.Errorf("failed to add documents: %w", err)
+	}
+
+	s.logger.Println("Documents successfully indexed")
+	return nil
+}
+
+func (s *ModelService) retrieveDocuments(ctx context.Context, query string, topK int) ([]schema.Document, error) {
+	retriever := vectorstores.ToRetriever(s.store, topK)
+	docs, err := retriever.GetRelevantDocuments(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve documents: %w", err)
 	}
-	return docRetrieved, nil
+	return docs, nil
 }
 
-func GetAnswer(ctx context.Context, llm llms.Model, docs []schema.Document, query string) (string, error) {
+func (s *ModelService) generateAnswer(ctx context.Context, docs []schema.Document, query string) (string, error) {
 	history := memory.NewChatMessageHistory()
 	for _, doc := range docs {
 		history.AddAIMessage(ctx, doc.PageContent)
@@ -98,12 +166,11 @@ func GetAnswer(ctx context.Context, llm llms.Model, docs []schema.Document, quer
 
 	conversation := memory.NewConversationBuffer(memory.WithChatHistory(history))
 	executor := agents.NewExecutor(
-		agents.NewConversationalAgent(llm, nil),
+		agents.NewConversationalAgent(s.llm, nil),
 		agents.WithMemory(conversation),
 	)
 
-	options := []chains.ChainCallOption{chains.WithTemperature(0.8)}
-	res, err := chains.Run(ctx, executor, query, options...)
+	res, err := chains.Run(ctx, executor, query)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate answer: %w", err)
 	}
