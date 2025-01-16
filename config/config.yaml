@@ -1,11 +1,18 @@
-milvus:
-  address: "10.18.150.1:19530"
-  db_name: "default"
-  collection: "text_collection"
-  index:
-    type: "IVF_FLAT"
-    metric_type: "L2"
-    nlist: 1024
+vector_store:
+  type: "qdrant"  # 或 "qdrant"
+  
+  milvus:
+    address: "10.18.150.1:19530"
+    db_name: "default"
+    collection: "qa"
+    index:
+      type: "HNSW"
+      metric_type: "L2"
+      nlist: 1024
+
+  qdrant:
+    address: "http://192.168.1.158:6333"
+    collection: "qa"
 
 ollama:
   address: "http://192.168.1.228:11434"
@@ -18,3 +25,11 @@ processing:
   chunk_overlap: 0
   top_k: 5
   score_threshold: 0.5
+
+mysql:
+  dsn: "root:123456@tcp(192.168.1.158:3307)/test?parseTime=true&charset=utf8mb4"
+
+http:
+  port: 8080
+  read_timeout: 30s
+  write_timeout: 30s

@@ -8,9 +8,20 @@ import (
 )
 
 type Config struct {
-	Milvus     MilvusConfig     `yaml:"milvus"`
-	Ollama     OllamaConfig     `yaml:"ollama"`
-	Processing ProcessingConfig `yaml:"processing"`
+	VectorStore VectorStoreConfig `yaml:"vector_store"`
+	Ollama      OllamaConfig      `yaml:"ollama"`
+	Processing  ProcessingConfig  `yaml:"processing"`
+	MySQL       MySQLConfig       `yaml:"mysql"`
+}
+
+type VectorStoreConfig struct {
+	Type   string       `yaml:"type"`
+	Milvus MilvusConfig `yaml:"milvus"`
+	Qdrant QdrantConfig `yaml:"qdrant"`
+}
+
+type MySQLConfig struct {
+	DSN string `yaml:"dsn"`
 }
 
 type MilvusConfig struct {
@@ -18,6 +29,11 @@ type MilvusConfig struct {
 	DBName     string      `yaml:"db_name"`
 	Collection string      `yaml:"collection"`
 	Index      IndexConfig `yaml:"index"`
+}
+
+type QdrantConfig struct {
+	Address    string `yaml:"address"`
+	Collection string `yaml:"collection"`
 }
 
 type OllamaConfig struct {
@@ -59,7 +75,7 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 func validateConfig(cfg *Config) error {
-	if cfg.Milvus.Address == "" {
+	if cfg.VectorStore.Milvus.Address == "" {
 		return fmt.Errorf("milvus address is required")
 	}
 	if cfg.Ollama.Address == "" {
@@ -70,3 +86,23 @@ func validateConfig(cfg *Config) error {
 	}
 	return nil
 }
+
+// func (c *MilvusConfig) Validate() error {
+// 	if c.Address == "" {
+// 		return fmt.Errorf("milvus address is required")
+// 	}
+// 	if c.Collection == "" {
+// 		return fmt.Errorf("milvus collection name is required")
+// 	}
+// 	return nil
+// }
+
+// func (c *QdrantConfig) Validate() error {
+// 	if c.Address == "" {
+// 		return fmt.Errorf("qdrant address is required")
+// 	}
+// 	if c.Collection == "" {
+// 		return fmt.Errorf("qdrant collection name is required")
+// 	}
+// 	return nil
+// }

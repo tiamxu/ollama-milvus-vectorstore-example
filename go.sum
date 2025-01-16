@@ -413,8 +413,8 @@ github.com/testcontainers/testcontainers-go v0.31.0 h1:W0VwIhcEVhRflwL9as3dhY6jX
 github.com/testcontainers/testcontainers-go v0.31.0/go.mod h1:D2lAoA0zUFiSY+eAflqK5mcUx/A5hrrORaEQrd0SefI=
 github.com/testcontainers/testcontainers-go/modules/milvus v0.31.0 h1:0wTakit4o9Yn0VNkzDOY5hV1LeKcw2W7gxcLa3el2x0=
 github.com/testcontainers/testcontainers-go/modules/milvus v0.31.0/go.mod h1:ta9EDZd+lKBMU7enljbNu5H1G495fnT0dw7hmsCPWa0=
-github.com/tiamxu/ollama-milvus-vectorstore-example v0.0.0-20250107121840-c53efa85d53f h1:Oy66qJNXoNPgHTiqVFJKdb8HcyvyIYxQOmLUNx7xhL4=
-github.com/tiamxu/ollama-milvus-vectorstore-example v0.0.0-20250107121840-c53efa85d53f/go.mod h1:fPN0X8trj9B4sylHxioqnbLKql0OJJuA4fY8ZeAfwCc=
+github.com/testcontainers/testcontainers-go/modules/qdrant v0.31.0 h1:5bYvi8lSqDnJrO1w5W3AFaSsRe4ZDv4TPj1tsaBEz20=
+github.com/testcontainers/testcontainers-go/modules/qdrant v0.31.0/go.mod h1:/3GyFMTSiem1j5mfI/96MufdNvB3A8Xqa+xnV4CUR4A=
 github.com/tidwall/gjson v1.14.4 h1:uo0p8EbA09J7RQaflQ1aBRffTR7xedD2bcIVSYxLnkM=
 github.com/tidwall/gjson v1.14.4/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=

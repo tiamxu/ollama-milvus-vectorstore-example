@@ -3,9 +3,10 @@ module ollama-milvus-vectorstore-example
 go 1.22.3
 
 require (
+	github.com/go-sql-driver/mysql v1.7.1
 	github.com/milvus-io/milvus-sdk-go/v2 v2.4.2
-	github.com/tiamxu/ollama-milvus-vectorstore-example v0.0.0-20250107121840-c53efa85d53f
 	github.com/tmc/langchaingo v0.1.12
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -70,6 +71,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240509183442-62759503f434 // indirect
 	google.golang.org/grpc v1.64.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
