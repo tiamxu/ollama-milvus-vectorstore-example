@@ -1,5 +1,5 @@
 vector_store:
-  type: "qdrant"  # 或 "qdrant"
+  type: "milvus"  # 或 "qdrant",milvus
   
   milvus:
     address: "10.18.150.1:19530"
@@ -11,7 +11,9 @@ vector_store:
       nlist: 1024
 
   qdrant:
-    address: "http://192.168.1.158:6333"
+    address: "http://120.24.61.231:16333"
+    Host: "192.168.1.158"
+    Port: 6334
     collection: "qa"
 
 ollama:

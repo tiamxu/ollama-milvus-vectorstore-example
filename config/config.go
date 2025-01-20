@@ -33,6 +33,8 @@ type MilvusConfig struct {
 
 type QdrantConfig struct {
 	Address    string `yaml:"address"`
+	Host       string `yaml:"host"`
+	Port       int    `yaml:"port"`
 	Collection string `yaml:"collection"`
 }
 
