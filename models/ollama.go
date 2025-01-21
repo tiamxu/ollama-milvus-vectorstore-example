@@ -14,6 +14,7 @@ import (
 	"github.com/tmc/langchaingo/embeddings"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/ollama"
+	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/tmc/langchaingo/memory"
 	"github.com/tmc/langchaingo/schema"
 
@@ -167,30 +168,55 @@ func (s *ModelService) initModels() (llms.Model, embeddings.Embedder, error) {
 		},
 	}
 
-	llm, err := ollama.New(
-		ollama.WithModel(s.cfg.Ollama.LLMModel),
-		ollama.WithServerURL(s.cfg.Ollama.Address),
-		ollama.WithHTTPClient(httpClient),
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize LLM: %w", err)
-	}
+	switch s.cfg.ModelType {
+	case "ollama":
+		llm, err := ollama.New(
+			ollama.WithModel(s.cfg.Ollama.LLMModel),
+			ollama.WithServerURL(s.cfg.Ollama.Address),
+			ollama.WithHTTPClient(httpClient),
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to initialize Ollama LLM: %w", err)
+		}
 
-	embedderModel, err := ollama.New(
-		ollama.WithModel(s.cfg.Ollama.EmbedderModel),
-		ollama.WithServerURL(s.cfg.Ollama.Address),
-		ollama.WithHTTPClient(httpClient),
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize embedder model: %w", err)
-	}
+		embedderModel, err := ollama.New(
+			ollama.WithModel(s.cfg.Ollama.EmbedderModel),
+			ollama.WithServerURL(s.cfg.Ollama.Address),
+			ollama.WithHTTPClient(httpClient),
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to initialize Ollama embedder model: %w", err)
+		}
 
-	embedder, err := embeddings.NewEmbedder(embedderModel)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create embedder: %w", err)
-	}
+		embedder, err := embeddings.NewEmbedder(embedderModel)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to create embedder: %w", err)
+		}
 
-	return llm, embedder, nil
+		return llm, embedder, nil
+
+	case "aliyun":
+		llm, err := openai.New(
+			openai.WithBaseURL(s.cfg.Aliyun.BaseURL),
+			openai.WithToken(s.cfg.Aliyun.APIKey),
+			openai.WithModel(s.cfg.Aliyun.LLMModel),
+			openai.WithEmbeddingModel(s.cfg.Aliyun.EmbeddingModel),
+			openai.WithHTTPClient(httpClient),
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to initialize Aliyun LLM: %w", err)
+		}
+
+		embedder, err := embeddings.NewEmbedder(llm)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to create embedder: %w", err)
+		}
+
+		return llm, embedder, nil
+
+	default:
+		return nil, nil, fmt.Errorf("unsupported model type: %s", s.cfg.ModelType)
+	}
 }
 
 func (s *ModelService) initVectorStore(ctx context.Context, embedder embeddings.Embedder) (vectorstore.VectorStore, error) {
@@ -321,6 +347,26 @@ func (s *ModelService) generateAnswer(ctx context.Context, docs []schema.Documen
 		return "", fmt.Errorf("failed to generate answer: %w", err)
 	}
 	return res, nil
+}
+
+// GetStoredQuestions returns all stored questions from MySQL
+func (s *ModelService) GetStoredQuestions(ctx context.Context) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT question FROM qa_pairs ORDER BY created_at DESC")
+	if err != nil {
+		return nil, fmt.Errorf("failed to query questions: %w", err)
+	}
+	defer rows.Close()
+
+	var questions []string
+	for rows.Next() {
+		var question string
+		if err := rows.Scan(&question); err != nil {
+			return nil, fmt.Errorf("failed to scan question: %w", err)
+		}
+		questions = append(questions, question)
+	}
+
+	return questions, nil
 }
 
 func (s *ModelService) Close(ctx context.Context) error {

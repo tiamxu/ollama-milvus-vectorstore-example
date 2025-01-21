@@ -61,7 +61,7 @@ func (q *QdrantStore) Initialize(ctx context.Context) error {
 		err = client.CreateCollection(ctx, &qdrantclient.CreateCollection{
 			CollectionName: q.cfg.Collection,
 			VectorsConfig: qdrantclient.NewVectorsConfig(&qdrantclient.VectorParams{
-				Size:     768,
+				Size:     1024,
 				Distance: qdrantclient.Distance_Cosine,
 			}),
 		})

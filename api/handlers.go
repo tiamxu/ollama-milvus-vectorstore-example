@@ -95,6 +95,24 @@ func (h *Handler) StoreQAHandler(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, Response{Success: true})
 }
 
+func (h *Handler) GetQuestionsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		jsonResponse(w, http.StatusMethodNotAllowed, Response{Success: false, Error: "仅支持 GET 方法"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	questions, err := h.modelService.GetStoredQuestions(ctx)
+	if err != nil {
+		jsonResponse(w, http.StatusInternalServerError, Response{Success: false, Error: err.Error()})
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, Response{Success: true, Data: questions})
+}
+
 func jsonResponse(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

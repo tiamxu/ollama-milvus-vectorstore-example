@@ -66,7 +66,12 @@ func main() {
 	// 设置路由
 	mux.HandleFunc("/api/query", handler.QueryHandler)
 	mux.HandleFunc("/api/store", handler.StoreQAHandler)
+	mux.HandleFunc("/api/questions", handler.GetQuestionsHandler)
 	mux.HandleFunc("/health", handler.HealthCheckHandler)
+
+	// 静态文件服务
+	fs := http.FileServer(http.Dir("static"))
+	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// 启动 HTTP 服务器
 	server := &http.Server{

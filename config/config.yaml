@@ -1,5 +1,6 @@
+model_type: "aliyun"  # 或 "aliyun"
 vector_store:
-  type: "milvus"  # 或 "qdrant",milvus
+  type: "qdrant"  # 或 "qdrant",milvus
   
   milvus:
     address: "10.18.150.1:19530"
@@ -12,8 +13,8 @@ vector_store:
 
   qdrant:
     address: "http://120.24.61.231:16333"
-    Host: "192.168.1.158"
-    Port: 6334
+    Host: "120.24.61.231"
+    Port: 16334
     collection: "qa"
 
 ollama:
@@ -21,6 +22,12 @@ ollama:
   llm_model: "qwen2.5:7b"
   embedder_model: "nomic-embed-text:latest"
   temperature: 0.8
+
+aliyun:
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  api_key: "sk-dda0881c077849eea532a185e5731d28"
+  llm_model: "qwen-turbo"
+  embedding_model: "text-embedding-v3"
 
 processing:
   chunk_size: 50

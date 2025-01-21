@@ -10,8 +10,10 @@ import (
 type Config struct {
 	VectorStore VectorStoreConfig `yaml:"vector_store"`
 	Ollama      OllamaConfig      `yaml:"ollama"`
+	Aliyun      AliyunConfig      `yaml:"aliyun"`
 	Processing  ProcessingConfig  `yaml:"processing"`
 	MySQL       MySQLConfig       `yaml:"mysql"`
+	ModelType   string            `yaml:"model_type"` // ollama or aliyun
 }
 
 type VectorStoreConfig struct {
@@ -43,6 +45,13 @@ type OllamaConfig struct {
 	LLMModel      string  `yaml:"llm_model"`
 	EmbedderModel string  `yaml:"embedder_model"`
 	Temperature   float64 `yaml:"temperature"`
+}
+
+type AliyunConfig struct {
+	BaseURL        string `yaml:"base_url"`
+	APIKey         string `yaml:"api_key"`
+	LLMModel       string `yaml:"llm_model"`
+	EmbeddingModel string `yaml:"embedding_model"`
 }
 
 type ProcessingConfig struct {
@@ -80,8 +89,14 @@ func validateConfig(cfg *Config) error {
 	if cfg.VectorStore.Milvus.Address == "" {
 		return fmt.Errorf("milvus address is required")
 	}
-	if cfg.Ollama.Address == "" {
-		return fmt.Errorf("ollama address is required")
+	if cfg.ModelType == "ollama" && cfg.Ollama.Address == "" {
+		return fmt.Errorf("ollama address is required when using ollama model")
+	}
+	if cfg.ModelType == "aliyun" && cfg.Aliyun.APIKey == "" {
+		return fmt.Errorf("aliyun api key is required when using aliyun model")
+	}
+	if cfg.ModelType != "ollama" && cfg.ModelType != "aliyun" {
+		return fmt.Errorf("model_type must be either 'ollama' or 'aliyun'")
 	}
 	if cfg.Processing.ChunkSize <= 0 {
 		return fmt.Errorf("chunk size must be positive")
