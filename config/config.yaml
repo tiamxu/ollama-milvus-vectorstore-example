@@ -1,6 +1,6 @@
-model_type: "aliyun"  # 或 "aliyun"
+model_type: "ollama"  # ollama 或 "aliyun"
 vector_store:
-  type: "qdrant"  # 或 "qdrant",milvus
+  type: "milvus"  # 或 "qdrant",milvus
   
   milvus:
     address: "10.18.150.1:19530"

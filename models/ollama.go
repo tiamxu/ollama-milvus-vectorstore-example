@@ -103,12 +103,14 @@ func (s *ModelService) StoreQA(ctx context.Context, question string, answer stri
 
 // RetrieveAnswer retrieves answers for a query
 func (s *ModelService) RetrieveAnswer(ctx context.Context, query string, topK int) ([]string, error) {
+
 	// 1. Vector search for similar questions
 	docs, err := s.retrieveDocuments(ctx, query, topK)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve documents: %w", err)
 	}
-
+	// fmt.Printf("相似性查询:%v\n")
+	s.logger.Printf("向量数据库中相似性查询: %v", docs)
 	// 2. Extract IDs
 	var ids []int64
 	for _, doc := range docs {
@@ -123,6 +125,7 @@ func (s *ModelService) RetrieveAnswer(ctx context.Context, query string, topK in
 			}
 		}
 	}
+	s.logger.Printf("ids: %v", ids)
 
 	// 3. Query answers from MySQL
 	if len(ids) == 0 {
@@ -152,6 +155,7 @@ func (s *ModelService) RetrieveAnswer(ctx context.Context, query string, topK in
 		}
 		answers = append(answers, answer)
 	}
+	s.logger.Printf("answers: %v", answers)
 
 	return answers, nil
 }
@@ -268,8 +272,9 @@ func (s *ModelService) Query(ctx context.Context, query string, topK int) (strin
 // generateFinalResponse generates a final response using LLM based on question and answers
 func (s *ModelService) generateFinalResponse(ctx context.Context, query string, answers []string) (string, error) {
 	// Create prompt with question and answers
-	prompt := fmt.Sprintf("根据以下问题和相关答案，生成一个完整的回答：\n\n问题：%s\n\n相关答案：\n%s",
+	prompt := fmt.Sprintf("根据以下问题和相关提示，生成一个完整的回答：\n\n问题：%s\n\n相关提示：\n%s",
 		query, strings.Join(answers, "\n\n"))
+	s.logger.Printf("提交给大模型的问题: %v", prompt)
 
 	// Generate response using LLM
 	res, err := s.llm.GenerateContent(ctx, []llms.MessageContent{
@@ -298,9 +303,9 @@ func (s *ModelService) QueryWithRetrieve(ctx context.Context, query string, topK
 		return "", fmt.Errorf("failed to retrieve answers: %w", err)
 	}
 
-	// If no answers found, return default response
+	// If no answers found, return default response without calling LLM
 	if len(answers) == 0 {
-		return "没有找到相关答案", nil
+		return "抱歉，我无法识别这个问题。请尝试用其他方式提问，或者联系客服获取帮助。", nil
 	}
 
 	// Generate final response using LLM
